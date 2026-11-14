@@ -1,0 +1,94 @@
+# Reusable deployment: builds the site for one environment, deploys it to that
+# environment's Vercel project, then runs the /health smoke test.
+# Called by ci.yml (staging, on merge to main) and release.yml (live, on an approved tag).
+name: deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "staging or live"
+        required: true
+        type: string
+      version:
+        description: "Release tag, or 'unreleased'"
+        required: false
+        type: string
+        default: unreleased
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy-${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    # The GitHub environment holds that environment's secrets. For 'live' it also
+    # carries the approval rule: the job waits until Richard approves.
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.SITE_URL }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check deployment settings
+        run: |
+          missing=""
+          for name in VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          [ -n "${{ vars.SITE_URL }}" ] || missing="$missing SITE_URL(variable)"
+          if [ -n "$missing" ]; then
+            echo "::error::Environment '${{ inputs.environment }}' is missing:$missing. See docs/setup.md."
+            exit 1
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@65.12.1
+
+      - name: Pull Vercel settings
+        working-directory: web
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Stamp environment, version and commit into the build
+        working-directory: web
+        run: |
+          {
+            echo "APP_ENV=${{ inputs.environment }}"
+            echo "NEXT_PUBLIC_APP_ENV=${{ inputs.environment }}"
+            echo "NEXT_PUBLIC_APP_VERSION=${{ inputs.version }}"
+            echo "NEXT_PUBLIC_APP_COMMIT=${GITHUB_SHA::7}"
+          } >> .vercel/.env.production.local
+
+      - name: Build
+        working-directory: web
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        working-directory: web
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed to $url (served at ${{ vars.SITE_URL }})"
+
+      - name: Smoke test /health
+        run: python scripts/smoke_test.py "${{ vars.SITE_URL }}" "${{ inputs.environment }}" "${{ inputs.version }}"
