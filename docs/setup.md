@@ -62,12 +62,13 @@ with push protection if offered on your plan.
 ## 2. Vercel (website hosting, Hobby plan)
 
 1. Sign up at vercel.com with your GitHub account.
-2. Create **two** projects from the `statsmu` repository: `statsmu-staging` and `statsmu-live`.
-   For each: Framework *Next.js*, Root Directory *web*. Then in *Settings → Git*, **disconnect**
-   the Git connection: deployments come only from GitHub Actions, so nothing reaches live without
-   passing the pipeline.
+2. Create **two** projects, `statsmu-staging` and `statsmu-live`: Framework *Next.js*, Node 22,
+   **no Root Directory** (the pipeline already runs the Vercel CLI inside `web/`; setting *web*
+   here makes Vercel look for `web/web`) and **no Git connection**: deployments come only from
+   GitHub Actions, so nothing reaches live without passing the pipeline.
 3. In each project, *Settings → Environment Variables* (Production): `APP_ENV` = `staging` or `live`,
-   and `SENTRY_DSN` (from step 4).
+   and `SENTRY_DSN` plus `NEXT_PUBLIC_SENTRY_DSN` (same value, from step 4; the second reports
+   browser errors).
 4. Note for each project its **Project ID** (*Settings → General*), and your **Team/Org ID**
    (*Account Settings → General*, "Vercel ID").
 5. Create a token: *Account Settings → Tokens*, name `github-actions`, scope your account.
