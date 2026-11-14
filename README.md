@@ -9,7 +9,7 @@ contracts. The full plan is the "Population Prototype — Build Plan" doc.
 
 | # | Module | Status |
 | --- | --- | --- |
-| 0 | Foundations | Built; awaiting account setup and staging sign-off |
+| 0 | Foundations | Released as foundations-v1.0 on 14 Nov 2026; locked |
 | 1 | Source registry and ingestion | Not started |
 
 ## Layout
