@@ -1,0 +1,36 @@
+# Statistics Mauritius, Population (DF_POP). Values approved by Richard, 14 Nov 2026.
+id: sm_df_pop
+title: Population
+publisher: Statistics Mauritius
+connector: sdmx
+address:
+  base_url: https://databrowser.govmu.org/ws/NSI_WS/rest/
+  agency: MU1
+  dataflow: DF_POP
+  version: "1.0"
+frequency: annual
+check_every: day
+expected_release:
+  months: [8]
+  note: Annual update; last published 7 Aug 2026. To confirm against the release calendar.
+licence: free_with_credit
+licence_note: https://statsmauritius.govmu.org/Documents/Homepage/SM_Copyright_Notice.pdf
+credit_line: "Source: Statistics Mauritius"
+access_rule: by_tier
+themes: [people.population]
+checks:
+  - type: min_rows
+    value: 1000
+  - type: required_dimensions
+    dimensions: [FREQ, REF_AREA, INDIC_POP, SEX, AGE]
+  - type: unique_key
+  - type: numeric_values
+  - type: periods_complete
+    from: "2007"
+  - type: sum_equals
+    dimension: AGE
+    total: _T
+  - type: sum_equals
+    dimension: SEX
+    total: _T
+active: true
