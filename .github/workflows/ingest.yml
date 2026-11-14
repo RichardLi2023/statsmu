@@ -1,0 +1,22 @@
+# Module 1: daily pull. Temporary first version: checks the feed is reachable from GitHub.
+name: ingest
+
+on:
+  pull_request:
+    paths: [".github/workflows/ingest.yml", "registry/**", "modules/01-ingestion/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reachability:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reach the Statistics Mauritius SDMX service
+        run: |
+          set -x
+          base=https://databrowser.govmu.org/ws/NSI_WS/rest
+          curl -sS -m 60 -o ac.json -w '%{http_code} %{size_download} %{time_total}\n' "$base/availableconstraint/MU1,DF_POP,1.0/all/all/all" -H 'Accept: application/vnd.sdmx.structure+json;version=1.0'
+          curl -sS -m 90 -o data.csv -w '%{http_code} %{size_download} %{time_total}\n' "$base/data/MU1,DF_POP,1.0/all/ALL/?dimensionAtObservation=AllDimensions" -H 'Accept: application/vnd.sdmx.data+csv;version=1.0.0'
+          head -c 300 ac.json; echo; wc -l data.csv; head -3 data.csv
