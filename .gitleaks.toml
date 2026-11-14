@@ -1,0 +1,14 @@
+# Secret scan settings: gitleaks' full default rule set, plus our own naming convention.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "statsmu-secret-assignment"
+description = "A value assigned to a secret-convention name in a committed file"
+regex = '''(?:SOURCE|DB|AUTH|SENTRY|EMAIL|VERCEL|API)_[A-Z0-9_]*(?:TOKEN|KEY|SECRET|PASSWORD|DSN|URL)\s*[=:]\s*['"]?([^\s'"#]{12,})'''
+secretGroup = 1
+keywords = ["_token", "_key", "_secret", "_password", "_dsn", "_url"]
+
+[allowlist]
+description = "Documentation and examples hold names only"
+paths = ['''\.env\.example$''', '''package-lock\.json$''']

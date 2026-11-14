@@ -1,0 +1,30 @@
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+
+# Web
+web/node_modules/
+web/.next/
+web/.vercel/
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
+
+# Data pulled at run time (raw store lives in the database / object storage, not git)
+data/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
