@@ -1,0 +1,2 @@
+# Runtime dependencies for all Python modules. Pinned ranges; Dependabot proposes updates.
+sentry-sdk>=2.0,<3
