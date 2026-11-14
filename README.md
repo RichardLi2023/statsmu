@@ -10,7 +10,7 @@ contracts. The full plan is the "Population Prototype — Build Plan" doc.
 | # | Module | Status |
 | --- | --- | --- |
 | 0 | Foundations | Released as foundations-v1.0 on 14 Nov 2026; locked |
-| 1 | Source registry and ingestion | Not started |
+| 1 | Source registry and ingestion | Spec approved 14 Nov 2026; contract v1 fixed (stage 2) |
 
 ## Layout
 
