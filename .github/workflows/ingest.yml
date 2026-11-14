@@ -1,0 +1,92 @@
+# Module 1 — the daily pull (contract section 6).
+# Schedule and manual runs pull every active registry source that is due into the staging
+# database. Pull requests that touch the registry or this module get a live smoke test instead
+# (registry valid, every active source reachable and parseable; no database, no secrets).
+name: ingest
+
+on:
+  schedule:
+    - cron: "43 1 * * *" # 05:43 Mauritius time
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Registry id to pull now (blank: every active source that is due)"
+        required: false
+        default: ""
+  pull_request:
+    paths: [".github/workflows/ingest.yml", "registry/**", "modules/01-ingestion/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ingest-${{ github.event_name == 'pull_request' && github.ref || 'pull' }}
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: modules/00-foundations/src:modules/01-ingestion/src
+
+jobs:
+  smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Registry is valid
+        run: python -m ingestion check-registry
+      - name: Every active source answers and parses
+        run: python -m ingestion smoke
+
+  pull:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: write # to re-enable this workflow, so GitHub's 60-day pause never applies
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Scheduled runs use the latest ingestion release (main until the first)
+        if: github.event_name == 'schedule'
+        run: |
+          tag=$(git tag --list 'ingestion-v*' --sort=-v:refname | head -1)
+          if [ -n "$tag" ]; then
+            git checkout --quiet "$tag"
+            echo "APP_VERSION=$tag" >> "$GITHUB_ENV"
+          fi
+          echo "Running ${tag:-main}"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Pull
+        env:
+          APP_ENV: staging
+          DB_URL: ${{ secrets.DB_URL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SOURCE: ${{ inputs.source }}
+          TRIGGER: ${{ github.event_name == 'schedule' && 'schedule' || 'manual' }}
+        run: |
+          export APP_COMMIT="$(git rev-parse --short HEAD)"
+          if [ -n "$SOURCE" ]; then
+            python -m ingestion run --trigger "$TRIGGER" --source "$SOURCE"
+          else
+            python -m ingestion run --trigger "$TRIGGER"
+          fi
+      - name: Keep the schedule alive
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/ingest.yml/enable"
