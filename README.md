@@ -46,7 +46,9 @@ Then write `spec.md` (stage 1, needs approval) and `contract/` (stage 2) before 
 
 ## Releasing
 
-1. Add `## <module>-vX.Y — YYYY-MM-DD` to `CHANGELOG.md` in a pull request and merge it.
-2. Tag the merged commit: `git tag ingestion-v1.0 && git push origin ingestion-v1.0`.
+1. Change the module's `CHANGELOG.md` heading to `## <module>-vX.Y — YYYY-MM-DD` in a pull request and merge it.
+2. In GitHub, *Releases → Draft a new release*: new tag `<module>-vX.Y`, target `main`,
+   tick *Set as a pre-release*, then *Publish release*. (From a computer with Git:
+   `git tag ingestion-v1.0 && git push origin ingestion-v1.0` does the same.)
 3. Approve the `live` deployment in GitHub → Actions. The site deploys, `/health` is checked,
-   and a GitHub release is created.
+   and the release is marked as the latest full release.
